@@ -70,7 +70,7 @@ def get_data(data,info_list):
     return pd.concat([info,total_data,today_data],axis=1) # info、today和total横向合并最终得到汇总的数据
 
 today_province = get_data(data_province,['id','lastUpdateTime','name'])
-print(today_province)
+# print(today_province)
 def save_data(data,name): # 定义保存数据方法
     file_name = name+'_'+time.strftime('%Y_%m_%d',time.localtime(time.time()))+'.csv'
     data.to_csv(file_name,index=None,encoding='utf_8_sig')
@@ -79,3 +79,80 @@ def save_data(data,name): # 定义保存数据方法
 time.strftime('%Y_%m_%d',time.localtime(time.time())) # 查询当天时间
 
 #save_data(today_province,'today_province') # 保存数据/各省实时数据
+
+# 输出全国历史数据
+
+chinaDayList = data['chinaDayList'] # 取出chinaDayList
+type(chinaDayList) # 查看chinaDayList的格式
+# chinaDayList[0] # 当天数据
+alltime_China = get_data(chinaDayList,['date','lastUpdateTime'])
+alltime_China.head()
+save_data(alltime_China,'alltime_China')
+
+# 输出全国各省历史数据
+
+url = 'https://c.m.163.com/ug/api/wuhan/app/data/list-by-area-code?areaCode=420000' # 定义数据地址
+r = requests.get(url, headers=headers) # 进行请求
+data_json = json.loads(r.text) # 获取json数据
+
+data_json.keys()
+data_json['data']['list'][0]
+data_test = get_data(data_json['data']['list'],['date'])
+data_test['name'] = '湖北省'
+data_test.head()
+today_province[['id','name']].head()
+a = ['1','2','3','4']
+b = ['q','w','e','r']
+
+# for i,j in zip(a, b):
+#     print(i,j)
+
+{ i:j  for i,j in zip(a, b)}
+province_dict = {num:name for num,name in zip(today_province['id'],today_province['name'])}
+
+# 查看前五个内容
+# count = 0
+# for i in province_dict:
+#     print(i,province_dict[i])
+#     count += 1
+#     if count == 5:
+#         break
+
+df1 = pd.DataFrame([{'a':1,'b':2,'c':3,},{'a':111,'b':222}])
+df2 = pd.DataFrame([{'a':9,'b':8,'c':7,},{'a':345,'c':789}])
+# 合并
+df1 = pd.concat([df1,df2],axis=0)
+# df1
+
+# 总结上述方法
+start = time.time()
+for province_id in province_dict: # 遍历各省编号
+    
+    try:
+        # 按照省编号访问每个省的数据地址，并获取json数据
+        url = 'https://c.m.163.com/ug/api/wuhan/app/data/list-by-area-code?areaCode='+province_id
+        r = requests.get(url, headers=headers)
+        data_json = json.loads(r.text)
+        
+        # 提取各省数据，然后写入各省名称
+        province_data = get_data(data_json['data']['list'],['date'])
+        province_data['name'] = province_dict[province_id]
+        
+        # 合并数据
+        if province_id == '420000':
+            alltime_province = province_data
+        else:
+            alltime_province = pd.concat([alltime_province,province_data])
+
+        save_data(alltime_province,'alltime_province')
+
+            
+            # print('-'*20,province_dict[province_id],'成功',
+            #       province_data.shape,alltime_province.shape,
+            #       ',累计耗时:',round(time.time()-start),'-'*20)
+        
+        # 设置延迟等待
+        time.sleep(10)
+        
+    except:
+        print('-'*20,province_dict[province_id],'wrong','-'*20)
